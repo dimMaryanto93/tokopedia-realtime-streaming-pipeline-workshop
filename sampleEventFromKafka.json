@@ -1,4 +1,7 @@
 {
-    "pid": 123,
-    "recommended_pids": [456,789]
+  "pid": 123,
+  "recommended_pids": [
+    456,
+    789
+  ]
 }

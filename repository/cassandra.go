@@ -2,6 +2,8 @@ package repository
 
 import (
 	"errors"
+	"strings"
+	"sync"
 
 	"github.com/gocql/gocql"
 	"go.uber.org/ratelimit"
@@ -45,17 +47,42 @@ func NewCassandraRepo(param CassandraParams) (Repository, error) {
 // 1. Key: ColumnField
 // 2. Value: ColumnValue
 func (c *cassandraRepo) Store(data []map[string]interface{}) (err error) {
+	var wg sync.WaitGroup
+	for _, dataRow := range data {
+		// Loop over data, create column and value variables
+		var col []string
+		var args []interface{}
+		var bindValues []string
+		c.rl.Take()
+		dataField := make(map[string]interface{})
 
-	// Loop over data, create column and value variables
+		for key, value := range dataRow {
+			dataField[key] = value
+			col = append(col, key)
+			args = append(args, value)
+			bindValues = append(bindValues, "?")
+		}
 
-	// Call rate limit function
+		// Call rate limit function
 
-	// Check clustering key, append shard key (partition key)
+		// Check clustering key, append shard key (partition key)
 
-	// Create query statement
+		// Create query statement
 
-	// Exec query statement
+		// Exec query statement
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			queryStmt := `INSERT INTO ` + c.keyspace + `.` + c.tableName + `(` + strings.Join(col, ",") + `)` + ` VALUES (` + strings.Join(bindValues, ",") + `)`
+			query := c.session.Query(queryStmt, args...)
+			err = query.Exec()
 
+			if err != nil {
+				return
+			}
+		}()
+	}
+	wg.Wait()
 	return err
 }
 
